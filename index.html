@@ -44,8 +44,8 @@
     </section>
   </main>
   <script>
-    const ATTENDANCE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwUqrOppme69ShCaxxB9r2wh2Rdn5LAX73oBX6N_1HVqnWXNCXWJohqtCY-pOhNzNcK/exec";
-    const STUDENT_FORM_URL = "https://iqac-cpp.github.io/student-attendance/";
+    const ATTENDANCE_SCRIPT_URL = "PASTE_ATTENDANCE_APPS_SCRIPT_WEB_APP_URL_HERE";
+    const STUDENT_FORM_URL = "PASTE_STUDENT_ATTENDANCE_GITHUB_PAGE_URL_HERE";
 
     const statusBox = document.getElementById("statusBox");
     const referenceNoInput = document.getElementById("referenceNo");
@@ -150,6 +150,19 @@
         showStatus("success","Final PDF generated and emailed successfully. Students included: " + data.attendanceCount);
       }catch(error){showStatus("error", error.message);}
     });
+
+    window.addEventListener("DOMContentLoaded", function () {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get("ref") || params.get("referenceNo") || "";
+
+      if (ref) {
+        referenceNoInput.value = ref;
+        setTimeout(function () {
+          document.getElementById("loadActivityBtn").click();
+        }, 300);
+      }
+    });
+
   </script>
 </body>
 </html>
