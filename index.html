@@ -12,6 +12,117 @@
     .status{display:none;border-radius:16px;padding:14px;margin:14px 0;font-weight:800}.status.success{display:block;color:var(--success);background:#ecfdf3;border:1px solid #75e0a7}.status.error{display:block;color:var(--danger);background:#fef3f2;border:1px solid #fda29b}.hidden{display:none!important}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.info{border:1px solid #e5edf6;border-radius:14px;background:#f8fbff;padding:10px}.label{color:var(--muted);font-size:.82rem;font-weight:900;text-transform:uppercase}.value{font-size:1rem;font-weight:900;word-break:break-word;margin-top:4px}.count{font-size:2.4rem;color:var(--blue);font-weight:900;text-align:center;padding:12px}
     .qrbox{text-align:center}.qrbox img{width:230px;height:230px;border:1px solid var(--border);border-radius:14px;background:white;padding:8px}.linkbox{word-break:break-all;background:#f8fbff;border:1px solid #e5edf6;border-radius:14px;padding:12px;font-weight:700;color:#344054}
+    
+    .modal-overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,.58);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:9999;
+      backdrop-filter:blur(2px);
+    }
+    .modal-overlay.active{display:flex}
+    .confirm-modal{
+      width:min(520px,100%);
+      background:#ffffff;
+      border-radius:24px;
+      border:1px solid #dbe7f3;
+      box-shadow:0 24px 70px rgba(15,23,42,.28);
+      overflow:hidden;
+      animation:modalPop .18s ease-out;
+    }
+    @keyframes modalPop{
+      from{transform:translateY(10px) scale(.98);opacity:.2}
+      to{transform:translateY(0) scale(1);opacity:1}
+    }
+    .confirm-modal-header{
+      padding:18px 20px;
+      background:linear-gradient(135deg,var(--blue),var(--blue2));
+      color:#ffffff;
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+    .confirm-icon{
+      width:42px;
+      height:42px;
+      border-radius:50%;
+      background:rgba(255,255,255,.18);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:1.35rem;
+      font-weight:900;
+      flex:0 0 auto;
+    }
+    .confirm-modal-header h3{
+      margin:0;
+      font-size:1.15rem;
+      line-height:1.25;
+    }
+    .confirm-modal-body{
+      padding:20px;
+      color:#1f2937;
+    }
+    .confirm-summary{
+      border:1px solid #e4edf7;
+      background:#f8fbff;
+      border-radius:16px;
+      padding:14px;
+      margin:12px 0 16px;
+    }
+    .confirm-row{
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      padding:7px 0;
+      border-bottom:1px dashed #d8e3ef;
+    }
+    .confirm-row:last-child{border-bottom:none}
+    .confirm-row span:first-child{
+      color:var(--muted);
+      font-weight:900;
+      font-size:.86rem;
+      text-transform:uppercase;
+    }
+    .confirm-row span:last-child{
+      color:var(--blue);
+      font-weight:900;
+      text-align:right;
+      word-break:break-word;
+    }
+    .confirm-note{
+      margin:0;
+      color:#475467;
+      font-weight:700;
+      font-size:.96rem;
+      line-height:1.45;
+    }
+    .confirm-actions{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      padding:0 20px 20px;
+    }
+    .btn-cancel{
+      background:#ffffff;
+      color:var(--blue);
+      border:1px solid var(--blue);
+    }
+    .btn-confirm{
+      background:var(--success);
+      color:#ffffff;
+      border:1px solid var(--success);
+    }
+    @media(max-width:560px){
+      .confirm-actions{grid-template-columns:1fr}
+      .confirm-row{display:block}
+      .confirm-row span:last-child{display:block;text-align:left;margin-top:2px}
+    }
+
     @media(max-width:560px){body{font-size:18px}.page{padding:10px}.grid{grid-template-columns:1fr}.qrbox img{width:210px;height:210px}}
   </style>
 </head>
@@ -43,6 +154,31 @@
       <button id="generatePdfBtn" class="btn btn-success" type="button">Generate Final PDF with Attendance</button>
     </section>
   </main>
+
+  <div id="finalPdfModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="finalPdfTitle">
+    <div class="confirm-modal">
+      <div class="confirm-modal-header">
+        <div class="confirm-icon">✓</div>
+        <div>
+          <h3 id="finalPdfTitle">Confirm Final PDF Generation</h3>
+          <div style="font-size:.86rem;opacity:.9;margin-top:3px;">Student attendance will be included in the final report</div>
+        </div>
+      </div>
+      <div class="confirm-modal-body">
+        <p class="confirm-note">Please confirm the details before generating the final PDF. The PDF will be generated and emailed to the faculty email address.</p>
+        <div class="confirm-summary">
+          <div class="confirm-row"><span>Reference No</span><span id="modalRefText">-</span></div>
+          <div class="confirm-row"><span>Students Submitted</span><span id="modalCountText">0</span></div>
+          <div class="confirm-row"><span>Activity</span><span id="modalActivityText">-</span></div>
+        </div>
+      </div>
+      <div class="confirm-actions">
+        <button id="cancelGeneratePdfBtn" class="btn btn-cancel" type="button">Cancel</button>
+        <button id="confirmGeneratePdfBtn" class="btn btn-confirm" type="button">Generate Final PDF</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const ATTENDANCE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwUqrOppme69ShCaxxB9r2wh2Rdn5LAX73oBX6N_1HVqnWXNCXWJohqtCY-pOhNzNcK/exec";
     const STUDENT_FORM_URL = "https://iqac-cpp.github.io/student-attendance/";
@@ -55,6 +191,57 @@
 
     function showStatus(type,msg){statusBox.className="status "+type;statusBox.textContent=msg;statusBox.scrollIntoView({behavior:"smooth",block:"start"});}
     function hideStatus(){statusBox.className="status";statusBox.textContent="";}
+
+    const finalPdfModal = document.getElementById("finalPdfModal");
+    const modalRefText = document.getElementById("modalRefText");
+    const modalCountText = document.getElementById("modalCountText");
+    const modalActivityText = document.getElementById("modalActivityText");
+    const cancelGeneratePdfBtn = document.getElementById("cancelGeneratePdfBtn");
+    const confirmGeneratePdfBtn = document.getElementById("confirmGeneratePdfBtn");
+
+    function openFinalPdfModal(){
+      if(!currentActivity){return;}
+      modalRefText.textContent = currentActivity.referenceNo || "-";
+      modalCountText.textContent = document.getElementById("countText").textContent || "0";
+      modalActivityText.textContent = currentActivity.activityName || "-";
+      finalPdfModal.classList.add("active");
+    }
+
+    function closeFinalPdfModal(){
+      finalPdfModal.classList.remove("active");
+    }
+
+    async function generateFinalPdfNow(){
+      if(!currentActivity){return;}
+
+      try{
+        closeFinalPdfModal();
+        confirmGeneratePdfBtn.disabled = true;
+        confirmGeneratePdfBtn.textContent = "Generating...";
+        showStatus("success","Generating final PDF. Please wait...");
+        const data = await jsonp("generateFinalPdf", {referenceNo: currentActivity.referenceNo});
+        if(!data.success){throw new Error(data.message || "PDF generation failed.");}
+        showStatus("success","Final PDF generated and emailed successfully. Students included: " + data.attendanceCount);
+      }catch(error){
+        showStatus("error", error.message);
+      }finally{
+        confirmGeneratePdfBtn.disabled = false;
+        confirmGeneratePdfBtn.textContent = "Generate Final PDF";
+      }
+    }
+
+    cancelGeneratePdfBtn.addEventListener("click", closeFinalPdfModal);
+    confirmGeneratePdfBtn.addEventListener("click", generateFinalPdfNow);
+    finalPdfModal.addEventListener("click", function(event){
+      if(event.target === finalPdfModal){
+        closeFinalPdfModal();
+      }
+    });
+    document.addEventListener("keydown", function(event){
+      if(event.key === "Escape" && finalPdfModal.classList.contains("active")){
+        closeFinalPdfModal();
+      }
+    });
 
     function jsonp(action, params){
       return new Promise((resolve,reject)=>{
@@ -138,17 +325,9 @@
       }
     });
 
-    document.getElementById("generatePdfBtn").addEventListener("click", async function(){
+    document.getElementById("generatePdfBtn").addEventListener("click", function(){
       if(!currentActivity){return;}
-      const count = document.getElementById("countText").textContent;
-      const ok = confirm(count + " students have submitted attendance. Generate final PDF now?");
-      if(!ok){return;}
-      try{
-        showStatus("success","Generating final PDF. Please wait...");
-        const data = await jsonp("generateFinalPdf", {referenceNo: currentActivity.referenceNo});
-        if(!data.success){throw new Error(data.message || "PDF generation failed.");}
-        showStatus("success","Final PDF generated and emailed successfully. Students included: " + data.attendanceCount);
-      }catch(error){showStatus("error", error.message);}
+      openFinalPdfModal();
     });
 
     window.addEventListener("DOMContentLoaded", function () {
