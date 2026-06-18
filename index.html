@@ -117,6 +117,50 @@
       color:#ffffff;
       border:1px solid var(--success);
     }
+    
+    .success-modal-header{
+      padding:18px 20px;
+      background:linear-gradient(135deg,#067647,#0a8f55);
+      color:#ffffff;
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+    .success-icon{
+      width:46px;
+      height:46px;
+      border-radius:50%;
+      background:rgba(255,255,255,.2);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:1.45rem;
+      font-weight:900;
+      flex:0 0 auto;
+    }
+    .success-modal-header h3{
+      margin:0;
+      font-size:1.16rem;
+      line-height:1.25;
+    }
+    .success-modal-body{
+      padding:20px;
+      color:#1f2937;
+    }
+    .success-message-box{
+      background:#ecfdf3;
+      border:1px solid #75e0a7;
+      border-radius:16px;
+      padding:14px;
+      color:#067647;
+      font-weight:800;
+      line-height:1.5;
+      margin:12px 0;
+    }
+    .success-close-actions{
+      padding:0 20px 20px;
+    }
+
     @media(max-width:560px){
       .confirm-actions{grid-template-columns:1fr}
       .confirm-row{display:block}
@@ -179,6 +223,32 @@
     </div>
   </div>
 
+
+  <div id="pdfSuccessModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="pdfSuccessTitle">
+    <div class="confirm-modal">
+      <div class="success-modal-header">
+        <div class="success-icon">✓</div>
+        <div>
+          <h3 id="pdfSuccessTitle">Final PDF Generated Successfully</h3>
+          <div style="font-size:.86rem;opacity:.92;margin-top:3px;">The report has been generated and emailed</div>
+        </div>
+      </div>
+      <div class="success-modal-body">
+        <div class="success-message-box" id="pdfSuccessMessage">
+          Final PDF with student attendance has been generated successfully.
+        </div>
+        <div class="confirm-summary">
+          <div class="confirm-row"><span>Reference No</span><span id="successRefText">-</span></div>
+          <div class="confirm-row"><span>Students Included</span><span id="successCountText">0</span></div>
+        </div>
+        <p class="confirm-note">You may now close this dashboard window.</p>
+      </div>
+      <div class="success-close-actions">
+        <button id="closeDashboardWindowBtn" class="btn btn-confirm" type="button">Close Window</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const ATTENDANCE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwUqrOppme69ShCaxxB9r2wh2Rdn5LAX73oBX6N_1HVqnWXNCXWJohqtCY-pOhNzNcK/exec";
     const STUDENT_FORM_URL = "https://iqac-cpp.github.io/student-attendance/";
@@ -199,6 +269,12 @@
     const cancelGeneratePdfBtn = document.getElementById("cancelGeneratePdfBtn");
     const confirmGeneratePdfBtn = document.getElementById("confirmGeneratePdfBtn");
 
+    const pdfSuccessModal = document.getElementById("pdfSuccessModal");
+    const pdfSuccessMessage = document.getElementById("pdfSuccessMessage");
+    const successRefText = document.getElementById("successRefText");
+    const successCountText = document.getElementById("successCountText");
+    const closeDashboardWindowBtn = document.getElementById("closeDashboardWindowBtn");
+
     function openFinalPdfModal(){
       if(!currentActivity){return;}
       modalRefText.textContent = currentActivity.referenceNo || "-";
@@ -211,6 +287,26 @@
       finalPdfModal.classList.remove("active");
     }
 
+    function openPdfSuccessModal(data){
+      successRefText.textContent = currentActivity && currentActivity.referenceNo ? currentActivity.referenceNo : "-";
+      successCountText.textContent = data && data.attendanceCount ? data.attendanceCount : (document.getElementById("countText").textContent || "0");
+      pdfSuccessMessage.textContent = "Final PDF with student attendance has been generated and emailed successfully.";
+      pdfSuccessModal.classList.add("active");
+    }
+
+    function closeDashboardWindow(){
+      window.close();
+
+      // Browser may block window.close() if the page was not opened by a script.
+      setTimeout(function(){
+        if(!window.closed){
+          pdfSuccessMessage.textContent = "Final PDF generated successfully. You may close this browser tab/window manually.";
+          closeDashboardWindowBtn.textContent = "Close Manually";
+          closeDashboardWindowBtn.disabled = true;
+        }
+      }, 400);
+    }
+
     async function generateFinalPdfNow(){
       if(!currentActivity){return;}
 
@@ -221,7 +317,8 @@
         showStatus("success","Generating final PDF. Please wait...");
         const data = await jsonp("generateFinalPdf", {referenceNo: currentActivity.referenceNo});
         if(!data.success){throw new Error(data.message || "PDF generation failed.");}
-        showStatus("success","Final PDF generated and emailed successfully. Students included: " + data.attendanceCount);
+        hideStatus();
+        openPdfSuccessModal(data);
       }catch(error){
         showStatus("error", error.message);
       }finally{
@@ -232,9 +329,17 @@
 
     cancelGeneratePdfBtn.addEventListener("click", closeFinalPdfModal);
     confirmGeneratePdfBtn.addEventListener("click", generateFinalPdfNow);
+    closeDashboardWindowBtn.addEventListener("click", closeDashboardWindow);
+
     finalPdfModal.addEventListener("click", function(event){
       if(event.target === finalPdfModal){
         closeFinalPdfModal();
+      }
+    });
+
+    pdfSuccessModal.addEventListener("click", function(event){
+      if(event.target === pdfSuccessModal){
+        closeDashboardWindow();
       }
     });
     document.addEventListener("keydown", function(event){
