@@ -274,6 +274,7 @@
     const successRefText = document.getElementById("successRefText");
     const successCountText = document.getElementById("successCountText");
     const closeDashboardWindowBtn = document.getElementById("closeDashboardWindowBtn");
+    const generatePdfBtn = document.getElementById("generatePdfBtn");
 
     function openFinalPdfModal(){
       if(!currentActivity){return;}
@@ -312,18 +313,27 @@
 
       try{
         closeFinalPdfModal();
+
         confirmGeneratePdfBtn.disabled = true;
+        generatePdfBtn.disabled = true;
         confirmGeneratePdfBtn.textContent = "Generating...";
+        generatePdfBtn.textContent = "Generating Final PDF...";
+
         showStatus("success","Generating final PDF. Please wait. For large attendance lists, this may take 3–5 minutes. Do not close this window.");
         const data = await jsonp("generateFinalPdf", {referenceNo: currentActivity.referenceNo});
+
         if(!data.success){throw new Error(data.message || "PDF generation failed.");}
+
         hideStatus();
         openPdfSuccessModal(data);
+
       }catch(error){
         showStatus("error", error.message);
       }finally{
         confirmGeneratePdfBtn.disabled = false;
+        generatePdfBtn.disabled = false;
         confirmGeneratePdfBtn.textContent = "Generate Final PDF";
+        generatePdfBtn.textContent = "Generate Final PDF with Attendance";
       }
     }
 
