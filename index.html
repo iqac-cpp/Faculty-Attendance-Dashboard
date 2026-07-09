@@ -291,7 +291,7 @@
     function openPdfSuccessModal(data){
       successRefText.textContent = currentActivity && currentActivity.referenceNo ? currentActivity.referenceNo : "-";
       successCountText.textContent = data && data.attendanceCount ? data.attendanceCount : (document.getElementById("countText").textContent || "0");
-      pdfSuccessMessage.textContent = "Final PDF with student attendance has been generated and emailed successfully.";
+      pdfSuccessMessage.textContent = "Final PDF with student attendance has been generated. The PDF link has been emailed successfully.";
       pdfSuccessModal.classList.add("active");
     }
 
@@ -316,16 +316,18 @@
 
         confirmGeneratePdfBtn.disabled = true;
         generatePdfBtn.disabled = true;
-        confirmGeneratePdfBtn.textContent = "Generating...";
-        generatePdfBtn.textContent = "Generating Final PDF...";
+        confirmGeneratePdfBtn.textContent = "Starting...";
+        generatePdfBtn.textContent = "Generating in Background...";
 
-        showStatus("success","Generating final PDF. Please wait. With 6 activity images and student signatures, this may take 5–7 minutes. Do not close this window or click again.");
-        const data = await jsonp("generateFinalPdf", {referenceNo: currentActivity.referenceNo});
+        showStatus("success","Final PDF generation started in background. Please keep this page open. The dashboard will check the status automatically.");
+        const queued = await jsonp("queueFinalPdf", {referenceNo: currentActivity.referenceNo});
 
-        if(!data.success){throw new Error(data.message || "PDF generation failed.");}
+        if(!queued.success){throw new Error(queued.message || "Could not start final PDF generation.");}
+
+        const finalData = await pollFinalPdfJob(queued.jobId, currentActivity.referenceNo);
 
         hideStatus();
-        openPdfSuccessModal(data);
+        openPdfSuccessModal(finalData);
 
       }catch(error){
         showStatus("error", error.message);
@@ -335,6 +337,58 @@
         confirmGeneratePdfBtn.textContent = "Generate Final PDF";
         generatePdfBtn.textContent = "Generate Final PDF with Attendance";
       }
+    }
+
+    function delay(ms){
+      return new Promise(function(resolve){setTimeout(resolve, ms);});
+    }
+
+    async function pollFinalPdfJob(jobId, referenceNo){
+      const startedAt = Date.now();
+      const maxWaitMs = 20 * 60 * 1000;
+      let attempt = 0;
+
+      while(Date.now() - startedAt < maxWaitMs){
+        attempt++;
+
+        const statusData = await jsonp("getFinalPdfJobStatus", {
+          jobId: jobId,
+          referenceNo: referenceNo
+        });
+
+        if(!statusData.success){
+          throw new Error(statusData.message || "Could not read PDF generation status.");
+        }
+
+        const status = statusData.status || "";
+        const message = statusData.message || "";
+
+        if(status === "DONE"){
+          const result = statusData.result || {};
+          return {
+            success: true,
+            referenceNo: referenceNo,
+            attendanceCount: result.attendanceCount || document.getElementById("countText").textContent || "0",
+            pdfUrl: result.pdfUrl || "",
+            docUrl: result.docUrl || "",
+            message: message || "Final PDF generated successfully."
+          };
+        }
+
+        if(status === "FAILED"){
+          throw new Error(statusData.error || message || "Final PDF generation failed.");
+        }
+
+        const elapsedMinutes = Math.max(1, Math.ceil((Date.now() - startedAt) / 60000));
+        showStatus(
+          "success",
+          "Final PDF is " + status.toLowerCase() + ". Please wait. Checked " + attempt + " time(s), about " + elapsedMinutes + " minute(s) elapsed."
+        );
+
+        await delay(10000);
+      }
+
+      throw new Error("Final PDF is still processing. Please check your email/Drive after a few minutes. Do not generate repeatedly.");
     }
 
     cancelGeneratePdfBtn.addEventListener("click", closeFinalPdfModal);
@@ -367,7 +421,7 @@
         params.callback = callback;
         const url = ATTENDANCE_SCRIPT_URL + "?" + new URLSearchParams(params).toString();
         const script = document.createElement("script");
-        const timer = setTimeout(()=>{cleanup();reject(new Error("Request timed out. The PDF may still be processing. Please wait two minutes and check email/Drive. Do not click Generate repeatedly."));}, 420000);
+        const timer = setTimeout(()=>{cleanup();reject(new Error("Status request timed out. The background PDF job may still be running. Please wait and check email/Drive."));}, 60000);
         window[callback] = function(data){cleanup();resolve(data);};
         function cleanup(){clearTimeout(timer);delete window[callback];script.remove();}
         script.onerror = function(){cleanup();reject(new Error("Request failed."));};
