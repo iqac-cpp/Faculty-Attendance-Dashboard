@@ -322,7 +322,13 @@
         showStatus("success","Final PDF generation started in background. Please keep this page open. The dashboard will check the status automatically.");
         const queued = await jsonp("queueFinalPdf", {referenceNo: currentActivity.referenceNo});
 
-        if(!queued.success){throw new Error(queued.message || "Could not start final PDF generation.");}
+        if(!queued.success){
+          throw new Error(queued.message || queued.error || "Could not start final PDF generation.");
+        }
+
+        if(queued.message){
+          showStatus("success", queued.message);
+        }
 
         const finalData = await pollFinalPdfJob(queued.jobId, currentActivity.referenceNo);
 
@@ -376,7 +382,7 @@
         }
 
         if(status === "FAILED"){
-          throw new Error(statusData.error || message || "Final PDF generation failed.");
+          throw new Error(statusData.error || statusData.triggerError || message || "Final PDF generation failed.");
         }
 
         const elapsedMinutes = Math.max(1, Math.ceil((Date.now() - startedAt) / 60000));
@@ -388,7 +394,7 @@
         await delay(10000);
       }
 
-      throw new Error("Final PDF is still processing. Please check your email/Drive after a few minutes. Do not generate repeatedly.");
+      throw new Error("Final PDF is still processing. Please check the faculty email and Drive folder. Do not generate repeatedly.");
     }
 
     cancelGeneratePdfBtn.addEventListener("click", closeFinalPdfModal);
@@ -421,7 +427,7 @@
         params.callback = callback;
         const url = ATTENDANCE_SCRIPT_URL + "?" + new URLSearchParams(params).toString();
         const script = document.createElement("script");
-        const timer = setTimeout(()=>{cleanup();reject(new Error("Status request timed out. The background PDF job may still be running. Please wait and check email/Drive."));}, 60000);
+        const timer = setTimeout(()=>{cleanup();reject(new Error("Status request timed out. The background PDF job may still be running. Please wait and check email/Drive."));}, 90000);
         window[callback] = function(data){cleanup();resolve(data);};
         function cleanup(){clearTimeout(timer);delete window[callback];script.remove();}
         script.onerror = function(){cleanup();reject(new Error("Request failed."));};
