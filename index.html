@@ -319,7 +319,7 @@
         confirmGeneratePdfBtn.textContent = "Starting...";
         generatePdfBtn.textContent = "Generating in Background...";
 
-        showStatus("success","Final PDF generation started in background. Please keep this page open. The dashboard will check the status automatically.");
+        showStatus("success","Final PDF generation started. Please keep this page open. The dashboard will check the status automatically.");
         const queued = await jsonp("queueFinalPdf", {referenceNo: currentActivity.referenceNo});
 
         if(!queued.success){
