@@ -291,7 +291,7 @@
     function openPdfSuccessModal(data){
       successRefText.textContent = currentActivity && currentActivity.referenceNo ? currentActivity.referenceNo : "-";
       successCountText.textContent = data && data.attendanceCount ? data.attendanceCount : (document.getElementById("countText").textContent || "0");
-      pdfSuccessMessage.textContent = "Final PDF with student attendance has been generated. The PDF link has been emailed successfully.";
+      pdfSuccessMessage.textContent = "Final PDF with student attendance has been generated and attached to the faculty email successfully.";
       pdfSuccessModal.classList.add("active");
     }
 
